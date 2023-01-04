@@ -1,0 +1,20 @@
+.container {
+  margin-bottom: 20px;
+  padding: 20px;
+  width: 100%;
+
+  background-color: rgb(204, 200, 200);
+  border-radius: 10px;
+
+  transition: background-color 0.3s ease-in-out;
+
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 200px;
+  }
+}
+
+.dragOver {
+  background-color: rgb(226, 226, 115);
+}

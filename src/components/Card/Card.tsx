@@ -1,8 +1,8 @@
 import classNames from 'classnames';
-import React, { FC, useEffect, memo } from 'react';
+import React, { FC, useEffect, memo, useRef, useLayoutEffect } from 'react';
 import { DragSourceMonitor, useDrag } from 'react-dnd';
 import { BasicProps } from '../../types';
-import CardDragPreview from '../CardDragPreview/CardDragPreview';
+import CardDragPreview from '../drag/Previews/CardDragPreview/CardDragPreview';
 
 import styles from './Card.module.scss';
 
@@ -10,37 +10,51 @@ interface CardProps extends BasicProps {
   id: string;
   imageUrl?: string;
   name: string;
+  isDraggable?: boolean;
   onClick?: () => void;
 }
 
-const Card: FC<CardProps> = memo((props) => {
-  const { className, id, imageUrl, name, onClick } = props;
+// const initializeDrag = (item: any) => {
+//   const [collected, dragRef] = useDrag({
+//     type: 'CARD',
+//     item: item,
+//     collect: (monitor: DragSourceMonitor) => ({
+//       isDragging: monitor.isDragging(),
+//       currentOffset: monitor.getClientOffset(),
+//     }),
+//   });
+//   return [collected, dragRef];
+// };
 
-  const [collected, dragRef, dragPreviewRef] = useDrag({
-    type: 'CARD',
-    item: { id, name, imageUrl },
-    collect: (monitor: DragSourceMonitor) => ({
-      isDragging: monitor.isDragging(),
-      currentOffset: monitor.getClientOffset(),
-    }),
-  });
+const Card: FC<CardProps> = (props) => {
+  const { className, id, imageUrl, name, isDraggable = false, onClick } = props;
 
-  // useEffect(() => {
-  //   dragPreviewRef(null);
-  // }, []);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const [collected, dragRef, previewRef] = isDraggable
+    ? useDrag({
+        type: 'CARD',
+        item: { id, name, imageUrl },
+        collect: (monitor: DragSourceMonitor) => ({
+          isDragging: monitor.isDragging(),
+          currentOffset: monitor.getClientOffset(),
+        }),
+      })
+    : [];
 
   return (
     <div
       className={classNames(
         styles.container,
         styles.card,
-        { [styles.dragging]: collected.isDragging },
+        { [styles.dragging]: collected?.isDragging },
         className
       )}
       ref={dragRef}
+      // draggable='false'
       onClick={onClick}
     >
-      <div className={styles.imageContainer} ref={(el) => dragPreviewRef(el, { anchorX: 1 })}>
+      <div className={styles.imageContainer} ref={previewRef}>
         <img src={imageUrl} alt={name}></img>
       </div>
       <div className={styles.nameContainer} onClick={onClick}>
@@ -48,6 +62,6 @@ const Card: FC<CardProps> = memo((props) => {
       </div>
     </div>
   );
-});
+};
 
 export default Card;

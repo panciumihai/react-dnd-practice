@@ -35,13 +35,6 @@ const CardsContainer = (props: CardsContainerProps) => {
     [cards]
   );
 
-  // if (collected.isDragging) document.body.style.cursor = 'default';
-
-  // if (!collected.canDrop && collected.isOver) {
-  //   document.body.style.cursor = 'not-allowed';
-  //   console.log("can't drop here");
-  // }
-
   return (
     <div
       className={classNames(styles.container, { [styles.dragOver]: collected.isOver })}
@@ -55,7 +48,6 @@ const CardsContainer = (props: CardsContainerProps) => {
             : '',
         ...style,
       }}
-      // ref={cardsContainerRef}
     >
       <h2>{name}</h2>
       <div className={styles.cards} ref={drop} data-handler-id={collected.handlerId}>
@@ -66,8 +58,8 @@ const CardsContainer = (props: CardsContainerProps) => {
               id={card.id}
               imageUrl={card.imageUrl}
               name={card.name}
+              isDraggable
               onClick={() => console.log(card.id, card.name)}
-              // onDragStarted={() => setDraggedCard(card)}
             />
           ))}
       </div>

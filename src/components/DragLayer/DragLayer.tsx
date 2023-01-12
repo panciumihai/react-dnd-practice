@@ -1,71 +1,85 @@
-import { CSSProperties } from 'react';
-import { useDragDropManager, useDragLayer, XYCoord } from 'react-dnd';
-import CardDragPreview from '../CardDragPreview/CardDragPreview';
+import React, { CSSProperties, memo, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { DragPreviewOptions, useDragDropManager, useDragLayer, XYCoord } from 'react-dnd';
+import ReactDOM, { render } from 'react-dom';
+import { DragItemTypes } from '../drag/DragItemTypes';
+import CardDragPreview from '../drag/Previews/CardDragPreview/CardDragPreview';
+import styles from './DragLayer.module.scss';
+import {
+  getCSSTranslate,
+  getCurrentSourceNode,
+  getCurrentSourcePreviewNodeOptions,
+  getDragPreviewOffSet,
+} from '../drag/utils';
 
-const getItemStyles = (
-  initialCursorOffset: XYCoord | null,
-  initialOffset: XYCoord | null,
-  currentOffset: XYCoord | null
-) => {
-  if (!initialOffset || !currentOffset || !initialCursorOffset) {
-    return {
-      display: 'none',
-    };
-  }
-
-  const x = initialCursorOffset?.x + (currentOffset.x - initialOffset.x) + 5;
-  const y = initialCursorOffset?.y + (currentOffset.y - initialOffset.y) + 5;
-  const transform = `translate(${x}px, ${y}px)`;
-
-  return {
-    transform,
-    WebkitTransform: transform,
-    // position: 'fixed',
-    // top: '0',
-    // left: '0',
-    // zIndex: 999,
-  } as CSSProperties;
-};
-
-interface DragLayerProps {}
+interface DragLayerProps {
+  scrollContainer: React.MutableRefObject<HTMLElement | undefined>;
+}
 
 const DragLayer = (props: DragLayerProps) => {
-  const {} = props;
-  const {
-    item,
-    itemType,
-    isDragging,
-    initialCursorOffset,
-    initialSourceOffset,
-    currentSourceOffset,
-  } = useDragLayer((monitor) => ({
-    item: monitor.getItem(),
-    itemType: monitor.getItemType(),
-    initialCursorOffset: monitor.getInitialClientOffset(),
-    initialSourceOffset: monitor.getInitialSourceClientOffset(),
-    currentSourceOffset: monitor.getSourceClientOffset(),
-    isDragging: monitor.isDragging(),
-  }));
+  const { scrollContainer } = props;
+  const previewRef = useRef<HTMLElement>();
+  const sourceRef = useRef<HTMLElement>();
+  const previewOptionsRef = useRef<DragPreviewOptions>();
+  const previewOffsetRef = useRef<XYCoord>({ x: -999, y: -999 });
 
-  if (isDragging) {
-    document.body.style.cursor = 'not-allowed';
-    // console.log('not allowed');
-  } else {
-    document.body.style.cursor = 'default';
-  }
+  const { item, itemType, isDragging, initialCursorOffset, initialSourceOffset, clientOffSet } =
+    useDragLayer((monitor) => ({
+      item: monitor.getItem(),
+      itemType: monitor.getItemType(),
+      isDragging: monitor.isDragging(),
+      initialCursorOffset: monitor.getInitialClientOffset(),
+      initialSourceOffset: monitor.getInitialSourceClientOffset(),
+      clientOffSet: monitor.getClientOffset(),
+    }));
 
-  let previewItem = <h3>No dragging things</h3>;
-  if (itemType === 'CARD') {
-    previewItem = (
-      <CardDragPreview
-        style={getItemStyles(initialCursorOffset, initialSourceOffset, currentSourceOffset)}
-        name={item.name}
-        imageUrl={item.imageUrl}
-      />
+  const dragDropManager = useDragDropManager();
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = 'not-allowed';
+
+      sourceRef.current = getCurrentSourceNode(dragDropManager);
+      previewOptionsRef.current = getCurrentSourcePreviewNodeOptions(dragDropManager);
+    } else {
+      document.body.style.cursor = 'default';
+
+      sourceRef.current = undefined;
+      previewOptionsRef.current = undefined;
+      previewOffsetRef.current = { x: -999, y: -999 };
+    }
+  }, [isDragging]);
+
+  // Here we add new drag previews accordingly to the dragged item type
+  const renderPreview = useMemo(() => {
+    switch (itemType) {
+      case DragItemTypes.TIMELINE_CARD:
+        return <CardDragPreview name={item.name} imageUrl={item.imageUrl} />;
+      default:
+        return <></>;
+    }
+  }, [itemType]);
+
+  if (isDragging && !!sourceRef.current && !!previewOptionsRef.current && !!previewRef.current)
+    previewOffsetRef.current = getDragPreviewOffSet(
+      sourceRef.current,
+      previewRef.current,
+      clientOffSet!,
+      initialCursorOffset!,
+      initialSourceOffset!,
+      previewOptionsRef.current!
     );
-  }
 
-  return previewItem;
+  return ReactDOM.createPortal(
+    <div className={styles.dragLayer}>
+      <div
+        className={styles.previewContainer}
+        ref={(el) => (previewRef.current = el as HTMLElement)}
+        style={getCSSTranslate(previewOffsetRef.current)}
+      >
+        {renderPreview}
+      </div>
+    </div>,
+    document.body
+  );
 };
 
-export default DragLayer;
+export default memo(DragLayer);
